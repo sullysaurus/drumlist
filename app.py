@@ -1,8 +1,10 @@
-import streamlit as st
+from flask import Flask, render_template, request
 import requests
 from bs4 import BeautifulSoup
-import time
 import pandas as pd
+import time
+
+app = Flask(__name__)
 
 def search_craigslist(locations, keywords):
     items_found = []
@@ -28,23 +30,24 @@ def search_craigslist(locations, keywords):
                         'Location': location
                     })
             else:
-                st.error(f"Failed to retrieve data for keyword: {keyword} in {location}")
+                items_found.append({
+                    'Title': f"Failed to retrieve data for keyword: {keyword} in {location}",
+                    'Date': '',
+                    'Link': '',
+                    'Price': '',
+                    'Location': location
+                })
             time.sleep(1)
     return pd.DataFrame(items_found)
 
-st.title('Craigslist Musical Instrument Scraper')
-
-# User inputs
-location_input = st.text_input('Enter locations (comma-separated, e.g., newyork, losangeles):')
-keyword_input = st.text_input('Enter keywords (comma-separated, e.g., Ludwig, Guitar):')
-
-# Button to start scraping
-if st.button('Scrape Craigslist'):
-    if location_input and keyword_input:
-        locations = location_input.split(',')
-        keywords = keyword_input.split(',')
+@app.route('/', methods=['GET', 'POST'])
+def index():
+    if request.method == 'POST':
+        locations = request.form['locations'].split(',')
+        keywords = request.form['keywords'].split(',')
         results_df = search_craigslist(locations, keywords)
-        st.dataframe(results_df)
-    else:
-        st.warning('Please enter both locations and keywords to proceed.')
+        return render_template('index.html', tables=[results_df.to_html(classes='data', header="true")])
+    return render_template('index.html')
 
+if __name__ == "__main__":
+    app.run(debug=True)
